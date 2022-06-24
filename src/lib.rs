@@ -1,6 +1,7 @@
-use anyhow::Error;
+pub(crate) mod curl;
+
+use curl::Curl;
 use emacs::{defun, IntoLisp};
-use reqwest::blocking::Response;
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
@@ -15,10 +16,21 @@ fn init(_: &emacs::Env) -> emacs::Result<()> {
 ///
 /// + url : image's url.
 /// + store : the directory to store image files.
+/// + referer : set it if return 403 error without referer.
 #[defun(name = "-download-external")]
-fn download(env: &emacs::Env, url: String, store: String) -> emacs::Result<emacs::Value<'_>> {
-    let resp = fetch(&url)?;
-    let im = resp.bytes()?.to_vec();
+fn download(
+    env: &emacs::Env,
+    url: String,
+    store: String,
+    referer: String,
+) -> emacs::Result<emacs::Value<'_>> {
+    let curl = Curl::new().check_installed()?.default_options();
+    let curl = if !referer.is_empty() {
+        curl.referer(&referer)
+    } else {
+        curl
+    };
+    let im = curl.get(&url)?;
     let filename = hex_filename(&im);
     // todo 如果不能直接从 url 中获取后缀，则使用文件头推测
     let fileext = url.split('.').last().unwrap();
@@ -43,27 +55,4 @@ pub(crate) fn hex_filename(content: &[u8]) -> String {
     let hash = hasher.finalize();
     let hexname = format!("{:x}", hash);
     return hexname;
-}
-
-pub(crate) fn fetch(url: &String) -> Result<Response, Error> {
-    let client = reqwest::blocking::ClientBuilder::default()
-        .referer(true)
-        .user_agent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0",
-        )
-        .build()?;
-    let req = client.get(url).build()?;
-    let resp = client.execute(req)?;
-    Ok(resp)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_fetch() {
-        let url = "https://o.acgpic.net/img-original/img/2022/06/19/00/00/13/99142922_p0.jpg";
-        let resp = fetch(&url.to_string()).unwrap();
-        std::fs::write("./target/test.jpg", resp.bytes().unwrap()).unwrap();
-    }
 }

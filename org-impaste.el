@@ -39,12 +39,13 @@
 (setq org-impaste-storage-dir (file-truename "~/org-life/static/images/"))
 
 
-(defun org-impaste-download (url)
+(defun org-impaste-download (url referer)
   "Download images from internet, need input `URL'.
-store image files into `org-impaste-storage-dir'"
-  (interactive "simage url: ")
+store image files into `org-impaste-storage-dir'
+and request by `REFERER', if it's not `*'"
+  (interactive "simage url: \nsreferer: ")
   (message "org-impaste downloaded: %s"
-    (org-impaste--download-external url org-impaste-storage-dir)))
+    (org-impaste--download-external url org-impaste-storage-dir referer)))
 
 (provide 'org-impaste)
 ;;; org-impaste.el ends here
