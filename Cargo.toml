@@ -15,3 +15,4 @@ anyhow = "1.0.58"
 emacs = "0.18.0"
 reqwest = { version = "0.11.11", features = ["blocking", "mime_guess", "default-tls"], default-features = false }
 sha2 = "0.10.2"
+tree_magic_mini = { version = "3.0.3", features = ["tree_magic_db", "with-gpl-data"] }
