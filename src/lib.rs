@@ -3,7 +3,7 @@ pub(crate) mod curl;
 use curl::Curl;
 use emacs::{defun, IntoLisp};
 use sha2::{Digest, Sha256};
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
 emacs::plugin_is_GPL_compatible!();
 
@@ -34,12 +34,15 @@ fn download(
     let filename = hex_filename(&im);
     // todo 如果不能直接从 url 中获取后缀，则使用文件头推测
     let fileext = url.split('.').last().unwrap();
-    let mut name = String::new();
-    name.push_str(&filename);
-    name.push('.');
-    name.push_str(&fileext);
-    std::fs::write(PathBuf::from(store).join(&name), im)?;
-    return name.into_lisp(&env);
+    let impath = PathBuf::from(&store).join(format!("{filename}.{fileext}"));
+    let infopath = PathBuf::from(&store).join(format!("{filename}.txt"));
+    std::fs::write(&impath, im)?;
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&infopath)?
+        .write(url.as_bytes())?;
+    return impath.to_str().into_lisp(&env);
 }
 
 /// paste image from clipboard
