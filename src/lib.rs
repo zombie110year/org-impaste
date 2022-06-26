@@ -36,7 +36,7 @@ fn download_(url: String, store: PathBuf, referer: String) -> Result<String, Err
     let im = if referer.is_empty() {
         fetch(&url, None)?
     } else {
-        fetch(&url, Some(referer))?
+        fetch(&url, Some(&referer))?
     }
     .bytes()?
     .to_vec();
@@ -50,8 +50,11 @@ fn download_(url: String, store: PathBuf, referer: String) -> Result<String, Err
         .create(true)
         .append(true)
         .open(&infopath)?;
-    log.write(url.as_bytes())?;
-    log.write(b"\n")?;
+    if referer.is_empty() {
+        log.write(format!("{url}\n").as_bytes())?;
+    } else {
+        log.write(format!("{url}\t{referer}").as_bytes())?;
+    }
     return Ok(impath.to_str().unwrap().to_string());
 }
 
@@ -70,7 +73,8 @@ pub(crate) fn hex_filename(content: &[u8]) -> String {
     return hexname;
 }
 
-pub(crate) fn fetch(url: &String, referer: Option<String>) -> Result<Response, Error> {
+// todo 多线程分片下载
+pub(crate) fn fetch(url: &str, referer: Option<&str>) -> Result<Response, Error> {
     let headers = if let Some(referer) = referer {
         let mut headers = HeaderMap::with_capacity(2);
         headers.insert(
