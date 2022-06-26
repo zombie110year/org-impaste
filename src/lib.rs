@@ -66,14 +66,18 @@ pub(crate) fn hex_filename(content: &[u8]) -> String {
     return hexname;
 }
 
-#[test]
-fn test_download() {
-    let x = download_(
-        "https://tse1-mm.cn.bing.net/th/id/OIP-C.iDdvnaGvywxqBKurXHDKcAHaFj?pid=ImgDet&rs=1"
-            .to_string(),
-        PathBuf::new().join("debug"),
-        "".to_string(),
-    )
-    .unwrap();
-    println!("{x}");
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_download() {
+        let x = download_(
+            "https://tse1-mm.cn.bing.net/th/id/OIP-C.iDdvnaGvywxqBKurXHDKcAHaFj?pid=ImgDet&rs=1"
+                .to_string(),
+            PathBuf::new().join("debug"),
+            "".to_string(),
+        )
+        .unwrap();
+        println!("{x}");
+    }
 }
