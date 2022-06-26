@@ -1,10 +1,14 @@
-pub(crate) mod curl;
-
 use anyhow::Error;
-use curl::Curl;
 use emacs::{defun, IntoLisp};
+use reqwest::blocking::Response;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use sha2::{Digest, Sha256};
+use std::str::FromStr;
 use std::{io::Write, path::PathBuf};
+
+const USER_AGENT: &'static str =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0";
+
 emacs::plugin_is_GPL_compatible!();
 
 #[emacs::module(name = "org-impaste")]
@@ -29,13 +33,13 @@ fn download(
 }
 
 fn download_(url: String, store: PathBuf, referer: String) -> Result<String, Error> {
-    let curl = Curl::new().check_installed()?.default_options();
-    let curl = if !referer.is_empty() {
-        curl.referer(&referer)
+    let im = if referer.is_empty() {
+        fetch(&url, None)?
     } else {
-        curl
-    };
-    let im = curl.get(&url)?;
+        fetch(&url, Some(referer))?
+    }
+    .bytes()?
+    .to_vec();
     let filename = hex_filename(&im);
     let mime = tree_magic_mini::from_u8(&im[..]);
     let fileext = mime.split("/").last().unwrap();
@@ -66,16 +70,43 @@ pub(crate) fn hex_filename(content: &[u8]) -> String {
     return hexname;
 }
 
+pub(crate) fn fetch(url: &String, referer: Option<String>) -> Result<Response, Error> {
+    let headers = if let Some(referer) = referer {
+        let mut headers = HeaderMap::with_capacity(2);
+        headers.insert(
+            HeaderName::from_str("referer")?,
+            HeaderValue::from_str(&referer)?,
+        );
+        headers.insert(
+            HeaderName::from_str("user-agent")?,
+            HeaderValue::from_str(USER_AGENT)?,
+        );
+        headers
+    } else {
+        let mut headers = HeaderMap::with_capacity(1);
+        headers.insert(
+            HeaderName::from_str("user-agent")?,
+            HeaderValue::from_str(USER_AGENT)?,
+        );
+        headers
+    };
+    let client = reqwest::blocking::ClientBuilder::default()
+        .default_headers(headers)
+        .build()?;
+    let req = client.get(url).build()?;
+    let resp = client.execute(req)?;
+    Ok(resp)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn test_download() {
         let x = download_(
-            "https://tse1-mm.cn.bing.net/th/id/OIP-C.iDdvnaGvywxqBKurXHDKcAHaFj?pid=ImgDet&rs=1"
-                .to_string(),
+            "https://o.acgpic.net/img-original/img/2022/06/22/00/04/00/99213747_p0.jpg".to_string(),
             PathBuf::new().join("debug"),
-            "".to_string(),
+            "https://pixivic.com/".to_string(),
         )
         .unwrap();
         println!("{x}");
