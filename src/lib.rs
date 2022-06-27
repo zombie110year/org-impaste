@@ -69,42 +69,12 @@ fn clipboard(env: &emacs::Env, store: String) -> emacs::Result<emacs::Value<'_>>
 }
 
 pub(crate) fn clipboard_(store: PathBuf) -> Result<String, Error> {
-    let mut ctx = Clipboard::new()?;
-    let im = ctx.get_image()?;
-    let width = im.width;
-    let height = im.height;
-    let raw = im.bytes;
-    let channels = raw.len() / (width * height);
-    let raw = if channels == 3 {
-        raw.to_vec()
-    } else if channels > 3 {
-        let mut buf = Vec::with_capacity(width * height * 3);
-        for chunk in raw.chunks(channels) {
-            buf.write(&chunk[..3])?;
-        }
-        buf
-    } else {
-        std::fs::write("debug.org-impaste.bin", raw.as_bytes())?;
-        return Err(anyhow::anyhow!(
-            "what image has channels {channels}?, debug info saved 'debug.org-impaste.bin'."
-        ));
-    };
-    if let Some(raw) = image::RgbImage::from_raw(width as u32, height as u32, raw) {
-        let mut imfile = Cursor::new(Vec::<u8>::with_capacity(height * width * 3));
-        {
-            let mut imbuf = BufWriter::new(&mut imfile);
-            raw.write_to(&mut imbuf, image::ImageOutputFormat::Png)?;
-        }
-        let im = &imfile.get_ref()[..];
-        let filename = hex_filename(im);
-        let impath = store.join(format!("{filename}.png"));
-        std::fs::write(&impath, im)?;
-        return Ok(impath.to_str().unwrap().to_string());
-    } else {
-        return Err(anyhow::anyhow!(
-            "ImageData's pixels are not enough to build {height}x{width} image"
-        ));
-    }
+    let (height, width, raw) = copied_image()?;
+    let png = build_png(height as u32, width as u32, raw)?;
+    let filename = hex_filename(&png);
+    let impath = store.join(format!("{filename}.png"));
+    std::fs::write(&impath, &png)?;
+    return Ok(impath.to_str().unwrap().to_string());
 }
 
 pub(crate) fn hex_filename(content: &[u8]) -> String {
@@ -142,6 +112,47 @@ pub(crate) fn fetch(url: &str, referer: Option<&str>) -> Result<Response, Error>
     let req = client.get(url).build()?;
     let resp = client.execute(req)?;
     Ok(resp)
+}
+
+/// return (height, width, bytes)
+pub(crate) fn copied_image() -> Result<(usize, usize, Vec<u8>), Error> {
+    let mut ctx = Clipboard::new()?;
+    let im = ctx.get_image()?;
+    let width = im.width;
+    let height = im.height;
+    let raw = im.bytes;
+    let channels = raw.len() / (width * height);
+    let raw = if channels == 3 {
+        raw.to_vec()
+    } else if channels > 3 {
+        let mut buf = Vec::with_capacity(width * height * 3);
+        for chunk in raw.chunks(channels) {
+            buf.write(&chunk[..3])?;
+        }
+        buf
+    } else {
+        std::fs::write("debug.org-impaste.bin", raw.as_bytes())?;
+        return Err(anyhow::anyhow!(
+            "what image has channels {channels}?, debug info saved 'debug.org-impaste.bin'."
+        ));
+    };
+    return Ok((height, width, raw));
+}
+
+pub(crate) fn build_png(height: u32, width: u32, content: Vec<u8>) -> Result<Vec<u8>, Error> {
+    if let Some(raw) = image::RgbImage::from_raw(width as u32, height as u32, content) {
+        let mut imfile = Cursor::new(Vec::<u8>::with_capacity((height * width * 3) as usize));
+        {
+            let mut imbuf = BufWriter::new(&mut imfile);
+            raw.write_to(&mut imbuf, image::ImageOutputFormat::Png)?;
+        }
+        let im = &imfile.get_ref()[..];
+        return Ok(im.to_vec());
+    } else {
+        return Err(anyhow::anyhow!(
+            "ImageData's pixels are not enough to build {height}x{width} image"
+        ));
+    }
 }
 
 #[cfg(test)]
