@@ -1,10 +1,13 @@
 use anyhow::Error;
+use arboard::Clipboard;
 use emacs::{defun, IntoLisp};
+use image::EncodableLayout;
 use reqwest::blocking::Response;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use sha2::{Digest, Sha256};
+use std::io::{BufWriter, Cursor, Write};
+use std::path::PathBuf;
 use std::str::FromStr;
-use std::{io::Write, path::PathBuf};
 
 const USER_AGENT: &'static str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0";
@@ -60,9 +63,48 @@ fn download_(url: String, store: PathBuf, referer: String) -> Result<String, Err
 
 /// paste image from clipboard
 #[defun(name = "-clipboard-external")]
-fn clipboard(env: &emacs::Env) -> emacs::Result<emacs::Value<'_>> {
-    let log = format!("org-impaste-clipboard");
-    env.message(&log)
+fn clipboard(env: &emacs::Env, store: String) -> emacs::Result<emacs::Value<'_>> {
+    let impath = clipboard_(PathBuf::from(store))?;
+    return impath.into_lisp(env);
+}
+
+pub(crate) fn clipboard_(store: PathBuf) -> Result<String, Error> {
+    let mut ctx = Clipboard::new()?;
+    let im = ctx.get_image()?;
+    let width = im.width;
+    let height = im.height;
+    let raw = im.bytes;
+    let channels = raw.len() / (width * height);
+    let raw = if channels == 3 {
+        raw.to_vec()
+    } else if channels > 3 {
+        let mut buf = Vec::with_capacity(width * height * 3);
+        for chunk in raw.chunks(channels) {
+            buf.write(&chunk[..3])?;
+        }
+        buf
+    } else {
+        std::fs::write("debug.org-impaste.bin", raw.as_bytes())?;
+        return Err(anyhow::anyhow!(
+            "what image has channels {channels}?, debug info saved 'debug.org-impaste.bin'."
+        ));
+    };
+    if let Some(raw) = image::RgbImage::from_raw(width as u32, height as u32, raw) {
+        let mut imfile = Cursor::new(Vec::<u8>::with_capacity(height * width * 3));
+        {
+            let mut imbuf = BufWriter::new(&mut imfile);
+            raw.write_to(&mut imbuf, image::ImageOutputFormat::Png)?;
+        }
+        let im = &imfile.get_ref()[..];
+        let filename = hex_filename(im);
+        let impath = store.join(format!("{filename}.png"));
+        std::fs::write(&impath, im)?;
+        return Ok(impath.to_str().unwrap().to_string());
+    } else {
+        return Err(anyhow::anyhow!(
+            "ImageData's pixels are not enough to build {height}x{width} image"
+        ));
+    }
 }
 
 pub(crate) fn hex_filename(content: &[u8]) -> String {
@@ -113,6 +155,12 @@ mod tests {
             "https://pixivic.com/".to_string(),
         )
         .unwrap();
+        println!("{x}");
+    }
+
+    #[test]
+    fn test_clipboard() {
+        let x = clipboard_(PathBuf::from("debug")).unwrap();
         println!("{x}");
     }
 }
