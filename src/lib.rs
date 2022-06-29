@@ -56,7 +56,7 @@ fn download_(url: String, store: PathBuf, referer: String) -> Result<String, Err
     if referer.is_empty() {
         log.write(format!("{url}\n").as_bytes())?;
     } else {
-        log.write(format!("{url}\t{referer}").as_bytes())?;
+        log.write(format!("{url}\t{referer}\n").as_bytes())?;
     }
     return Ok(impath.to_str().unwrap().to_string());
 }
