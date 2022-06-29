@@ -20,14 +20,31 @@
 ;;; Code:
 
 (require 'org)
+
+;; todo build a package which can be installed by use-package.
+
 ;; Load from org-impaste DLL
 (declare-function org-impaste--download-external "org-impaste")
 (declare-function org-impaste--clipboard-external "org-impaste")
 (declare-function org-impaste--timer-key-external "org-impaste")
-(declare-function rs-module/load "emacs-rs-module")
 
-(module-load (file-truename "./emacs_rs_module.dll"))
-(rs-module/load (file-truename"./target/debug/org_impaste.dll"))
+;; todo auto fetch x86_64 windows/linux/osx shared library from github release (CI build)
+;;      or auto compile on other platform.
+(defun org-impaste--init ()
+  "Init.
+
+The shared library should place on the same directory with org-impaste.el"
+  (let* ((name "org-impaste")
+         (ext (pcase system-type
+                ((or 'gnu 'gnu/linux 'gnu/kfreebsd) "so")
+                ('darwin "dylib")
+                ('windows-nt "dll")
+                ((or 'ms-dot 'cygwin) (error "Unsupported system %s" system-type))))
+         (filename (format "%s.%s" name ext)))
+    (if (file-exists-p filename)
+        (module-load (file-truename filename))
+      (error "Dynamic module '%s' don't installed, download from github.com/zombie110year/org-impaste or compile from source" filename))))
+
 
 (defgroup org-impaste nil
   "Paste image into orgmode from internet or clipboard or drag/drop."
@@ -38,6 +55,7 @@
 (defcustom org-impaste-storage-dir (file-truename "~/org/images/")
   "The directory to store all the image files."
   :type 'string)
+;; 调试用 (setq org-impaste-storage-dir (file-truename "./debug"))
 
 ;; This is Command
 (defun org-impaste-download (url referer)
@@ -61,6 +79,7 @@ by formatted link."
                          impath
                          (file-name-directory buffer-file-name)))
               (impath-s (format "[[file:%s]]" impath-r)))
+         (message "org-impaste-download %s" impath-r)
          (replace-string-in-region placeholder impath-s 1))))))
 
 ;; This is Command
@@ -79,7 +98,9 @@ insert the formatted link into current buffer."
                          impath
                          (file-name-directory buffer-file-name)))
               (impath-s (format "[[file:%s]]" impath-r)))
+         (message "org-impaste-download %s" impath-r)
          (replace-string-in-region placeholder impath-s 1))))))
 
+(org-impaste--init)
 (provide 'org-impaste)
 ;;; org-impaste.el ends here

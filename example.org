@@ -1,0 +1,30 @@
+#+title: Test org-impaste
+
+First, you should set the =org-impaste-storage-dir= the an existing directory,
+or org-impaste will crash.
+Because of the naive usage of =make-thread=, the error message disappeared.
+
+* org-impaste-download
+
+** A free access image
+
+This kind of image can be access by anyone, so we just need its url.
+
+Test Url: =https://tse3-mm.cn.bing.net/th/id/OIP-C.bVuzJOhZgQKTbilw6L6eqgHaNK?pid=ImgDet&rs=1=
+
+Run =org-impaste-download= and enter the url, the referer leave blank.
+
+** A image only access by specified site
+
+It will check the referer attribute, so type referer after url.
+
++ Test Url: =https://i0.hdslb.com/bfs/article/d8afd1c93d15bcead7b8a8652d41ee7efe606429.jpg=
++ Need Referer: =https://www.bilibili.com/=
+
+Run =org-impaste-download= and enter the url and referer.
+
+* org-impaste-clipboard
+
+Use other clipboard tool to take a screenshot and save it to clipboard.
+
+Then, run =org-impaste-clipboard=.
