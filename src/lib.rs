@@ -68,6 +68,20 @@ fn clipboard(env: &emacs::Env, store: String) -> emacs::Result<emacs::Value<'_>>
     return impath.into_lisp(env);
 }
 
+/// generate a hex string by system time(nano seconds) as a placeholder
+#[defun(name = "-timer-key-external")]
+fn timer_key(env: &emacs::Env) -> emacs::Result<emacs::Value<'_>> {
+    let key = timer_key_()?;
+    key.into_lisp(env)
+}
+
+pub(crate) fn timer_key_() -> Result<String, Error> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let now = SystemTime::now();
+    let seed = now.duration_since(SystemTime::from(UNIX_EPOCH))?.as_nanos();
+    Ok(format!("{:x}", seed))
+}
+
 pub(crate) fn clipboard_(store: PathBuf) -> Result<String, Error> {
     let (height, width, raw) = copied_image()?;
     let png = build_png(height as u32, width as u32, raw)?;
@@ -172,6 +186,12 @@ mod tests {
     #[test]
     fn test_clipboard() {
         let x = clipboard_(PathBuf::from("debug")).unwrap();
+        println!("{x}");
+    }
+
+    #[test]
+    fn test_random_key() {
+        let x = timer_key().unwrap();
         println!("{x}");
     }
 }
