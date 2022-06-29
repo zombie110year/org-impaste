@@ -12,7 +12,7 @@ fn init(_: &emacs::Env) -> emacs::Result<()> {
     Ok(())
 }
 
-/// download image from internet
+/// Download image from internet
 ///
 /// + url : image's url.
 /// + store : the directory to store image files.
@@ -28,17 +28,19 @@ fn download(
     return impath.into_lisp(&env);
 }
 
-/// paste image from clipboard
+/// Paste image from clipboard
+///
+/// + store : the directory to store image files.
 #[defun(name = "-clipboard-external")]
 fn clipboard(env: &emacs::Env, store: String) -> emacs::Result<emacs::Value<'_>> {
     let impath = prelude::clipboard(PathBuf::from(store))?;
     return impath.into_lisp(env);
 }
 
-/// generate a hex string by system time(nano seconds) as a placeholder
+/// Generate a hex string by system time(nano seconds) as a placeholder
 #[defun(name = "-timer-key-external")]
 fn timer_key(env: &emacs::Env) -> emacs::Result<emacs::Value<'_>> {
-    let key = prelude::timer_key()?;
+    let key = prelude::timer_hex()?;
     key.into_lisp(env)
 }
 
@@ -67,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_random_key() {
-        let x = timer_key().unwrap();
+        let x = timer_hex().unwrap();
         println!("{x}");
     }
 }
