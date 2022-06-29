@@ -23,7 +23,7 @@
 ;; Load from org-impaste DLL
 (declare-function org-impaste--download-external "org-impaste")
 (declare-function org-impaste--clipboard-external "org-impaste")
-(declare-function org-impaste--random-key-external "org-impaste")
+(declare-function org-impaste--timer-key-external "org-impaste")
 (declare-function rs-module/load "emacs-rs-module")
 
 (module-load (file-truename "./emacs_rs_module.dll"))
@@ -34,12 +34,12 @@
   :group 'org
   :prefix "org-impaste-")
 
+;; This is Configure
 (defcustom org-impaste-storage-dir (file-truename "~/org/images/")
   "The directory to store all the image files."
   :type 'string)
 
-(setq org-impaste-storage-dir (file-truename "./debug/"))
-
+;; This is Command
 (defun org-impaste-download (url referer)
   "Download images from internet, need input `URL'.
 store image files into `org-impaste-storage-dir'
@@ -50,18 +50,36 @@ While downloading, it will insert a placeholder like
 When download finished, the placeholder will be replaced
 by formatted link."
   (interactive "simage url: \nsreferer: ")
-  (let* ((key (org-impaste--random-key-external))
+  (let* ((key (org-impaste--timer-key-external))
          (placeholder (format "<org-impaste-download %s>" key)))
     (insert placeholder)
     (make-thread
      (lambda ()
        (let* ((impath (org-impaste--download-external
                       url org-impaste-storage-dir referer))
-              (impath-r (file-relative-name impath buffer-file-name))
+              (impath-r (file-relative-name
+                         impath
+                         (file-name-directory buffer-file-name)))
               (impath-s (format "[[file:%s]]" impath-r)))
-         (replace-string-in-region
-          (format "<org-impaste-download %s>" key) impath-s 1))))))
+         (replace-string-in-region placeholder impath-s 1))))))
 
+;; This is Command
+(defun org-impaste-clipboard ()
+  "Paste image content as PNG files into `org-impaste-storage-dir'.
+insert the formatted link into current buffer."
+  (interactive)
+  (let* ((key (org-impaste--timer-key-external))
+         (placeholder (format "<org-impaste-clipboard %s>" key)))
+    (insert placeholder)
+    (make-thread
+     (lambda ()
+       (let* ((impath (org-impaste--clipboard-external
+                       org-impaste-storage-dir))
+              (impath-r (file-relative-name
+                         impath
+                         (file-name-directory buffer-file-name)))
+              (impath-s (format "[[file:%s]]" impath-r)))
+         (replace-string-in-region placeholder impath-s 1))))))
 
 (provide 'org-impaste)
 ;;; org-impaste.el ends here
