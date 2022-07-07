@@ -1,5 +1,5 @@
 [package]
-name = "org-impaste"
+name = "org-impaste-module"
 version = "0.1.0"
 edition = "2021"
 

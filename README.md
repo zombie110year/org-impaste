@@ -13,9 +13,7 @@ org-impaste 是一个用 Rust 语言开发的 Emacs 插件。
 1. [x] 按 sha256 hex 字符串命名文件，在同名的 .txt 文件中存储每一次下载的原始链接
 1. [x] 读取环境变量 `HTTP_PROXY` 以及 `HTTPS_PROXY` 来指定网络代理
 
-# 安装
-
-# 配置
+# 安装与配置
 
 一个参考配置为
 
@@ -27,26 +25,36 @@ org-impaste 是一个用 Rust 语言开发的 Emacs 插件。
          ("C-c i p" . org-impaste-clipboard)))
 ```
 
+TODO: 自动编译
+
+## Doom Emacs
+
+```lisp
+;; packages.el
+(package! org-impaste
+  :recipe (:host github :repo "zombie110year/org-impaste))
+
+;; config.el
+(use-package! org-impaste
+  :after org
+  :config
+    (setq org-impaste-storage-dir (file-truename "~/org/images"))
+    (define-key org-mode-map "C-c i d" org-impaste-download)
+    (define-key org-mode-map "C-c i p" org-impaste-clipboard))
+```
+
 # 试用
 
 需要安装 rust 工具链。
 
-```sh
-git clone https://github.com/zombie110year/org-impaste
+```
 cd org-impaste
-cargo build
-# 假设是 Windows 系统，如果是其他系统则复制对应的链接库
-cp target/debug/org_impaste.dll ./org-impaste.dll
-mkdir debug
-emacs org-impaste.el
+cargo build --release
+mv target/release/org_impaste_module.dll ./
+cargo clean
 ```
 
-```lisp
-(defcustom org-impaste-storage-dir (file-truename "~/org/images/")
-  "The directory to store all the image files."
-  :type 'string)
-;; 调试用 (setq org-impaste-storage-dir (file-truename "./debug"))  <-- 取消这条注释，然后 eval buffer
-```
+或者到 [GitHub Releases](https://github.com/zombie110year/org-impaste/releases) 下载后将链接库文件保存到对应位置。
 
 使用 emacs 打开 [./example.org](./example.org) 文件，尝试运行 `org-impaste-download` 与 `org-impaste-clipboard` 命令。
 

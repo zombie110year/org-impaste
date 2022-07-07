@@ -19,14 +19,15 @@
 ;;
 ;;; Code:
 
-(require 'org)
+(eval-when-compile
+  (require 'org))
 
 ;; todo build a package which can be installed by use-package.
 
 ;; Load from org-impaste DLL
-(declare-function org-impaste--download-external "org-impaste")
-(declare-function org-impaste--clipboard-external "org-impaste")
-(declare-function org-impaste--timer-key-external "org-impaste")
+(declare-function org-impaste-module--download "org-impaste")
+(declare-function org-impaste-module--clipboard "org-impaste")
+(declare-function org-impaste-module--timer-key "org-impaste")
 
 ;; todo auto fetch x86_64 windows/linux/osx shared library from github release (CI build)
 ;;      or auto compile on other platform.
@@ -34,7 +35,7 @@
   "Init.
 
 The shared library should place on the same directory with org-impaste.el"
-  (let* ((name "org-impaste")
+  (let* ((name "org_impaste_module")
          (ext (pcase system-type
                 ((or 'gnu 'gnu/linux 'gnu/kfreebsd) "so")
                 ('darwin "dylib")
@@ -68,12 +69,12 @@ While downloading, it will insert a placeholder like
 When download finished, the placeholder will be replaced
 by formatted link."
   (interactive "simage url: \nsreferer: ")
-  (let* ((key (org-impaste--timer-key-external))
+  (let* ((key (org-impaste-module--timer-key))
          (placeholder (format "<org-impaste-download %s>" key)))
     (insert placeholder)
     (make-thread
      (lambda ()
-       (let* ((impath (org-impaste--download-external
+       (let* ((impath (org-impaste-module--download
                       url org-impaste-storage-dir referer))
               (impath-r (file-relative-name
                          impath
@@ -87,12 +88,12 @@ by formatted link."
   "Paste image content as PNG files into `org-impaste-storage-dir'.
 insert the formatted link into current buffer."
   (interactive)
-  (let* ((key (org-impaste--timer-key-external))
+  (let* ((key (org-impaste-module--timer-key))
          (placeholder (format "<org-impaste-clipboard %s>" key)))
     (insert placeholder)
     (make-thread
      (lambda ()
-       (let* ((impath (org-impaste--clipboard-external
+       (let* ((impath (org-impaste-module--clipboard
                        org-impaste-storage-dir))
               (impath-r (file-relative-name
                          impath

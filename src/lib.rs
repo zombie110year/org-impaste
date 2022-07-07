@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 emacs::plugin_is_GPL_compatible!();
 
-#[emacs::module(name = "org-impaste")]
+#[emacs::module(name = "org-impaste-module")]
 fn init(_: &emacs::Env) -> emacs::Result<()> {
     Ok(())
 }
@@ -17,7 +17,7 @@ fn init(_: &emacs::Env) -> emacs::Result<()> {
 /// + url : image's url.
 /// + store : the directory to store image files.
 /// + referer : set it if return 403 error without referer.
-#[defun(name = "-download-external")]
+#[defun(name = "-download")]
 fn download(
     env: &emacs::Env,
     url: String,
@@ -31,14 +31,14 @@ fn download(
 /// Paste image from clipboard
 ///
 /// + store : the directory to store image files.
-#[defun(name = "-clipboard-external")]
+#[defun(name = "-clipboard")]
 fn clipboard(env: &emacs::Env, store: String) -> emacs::Result<emacs::Value<'_>> {
     let impath = prelude::clipboard(PathBuf::from(store))?;
     return impath.into_lisp(env);
 }
 
 /// Generate a hex string by system time(nano seconds) as a placeholder
-#[defun(name = "-timer-key-external")]
+#[defun(name = "-timer-key")]
 fn timer_key(env: &emacs::Env) -> emacs::Result<emacs::Value<'_>> {
     let key = prelude::timer_hex()?;
     key.into_lisp(env)
