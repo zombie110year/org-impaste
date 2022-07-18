@@ -14,6 +14,9 @@ Test Url: =https://tse3-mm.cn.bing.net/th/id/OIP-C.bVuzJOhZgQKTbilw6L6eqgHaNK?pi
 
 Run =org-impaste-download= and enter the url, the referer leave blank.
 
+#+ATTR_ORG: :width 60%
+
+
 ** A image only access by specified site
 
 It will check the referer attribute, so type referer after url.
@@ -23,8 +26,13 @@ It will check the referer attribute, so type referer after url.
 
 Run =org-impaste-download= and enter the url and referer.
 
+#+ATTR_ORG: :width 60%
+
+
 * org-impaste-clipboard
 
 Use other clipboard tool to take a screenshot and save it to clipboard.
 
 Then, run =org-impaste-clipboard=.
+
+#+ATTR_ORG: :width 60%

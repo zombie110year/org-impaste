@@ -19,29 +19,26 @@
 ;;
 ;;; Code:
 
-(eval-when-compile
-  (require 'org))
-
 ;; todo build a package which can be installed by use-package.
 
 ;; Load from org-impaste DLL
-(declare-function org-impaste-module--download "org-impaste")
-(declare-function org-impaste-module--clipboard "org-impaste")
-(declare-function org-impaste-module--timer-key "org-impaste")
+(declare-function org-impaste-module--download nil)
+(declare-function org-impaste-module--clipboard nil)
+(declare-function org-impaste-module--timer-key nil)
 
-;; todo auto fetch x86_64 windows/linux/osx shared library from github release (CI build)
+;; TODO auto fetch x86_64 windows/linux/osx shared library from github release (CI build)
 ;;      or auto compile on other platform.
 (defun org-impaste--init ()
   "Init.
 
 The shared library should place on the same directory with org-impaste.el"
   (let* ((name "org_impaste_module")
-         (ext (pcase system-type
-                ((or 'gnu 'gnu/linux 'gnu/kfreebsd) "so")
-                ('darwin "dylib")
-                ('windows-nt "dll")
-                ((or 'ms-dot 'cygwin) (error "Unsupported system %s" system-type))))
-         (filename (format "%s.%s" name ext)))
+         (fstr (pcase system-type
+                 ((or 'gnu 'gnu/linux 'gnu/kfreebsd) "lib%s.so")
+                 ('darwin "lib%s.dylib")
+                 ('windows-nt "%s.dll")
+                 ((or 'ms-dot 'cygwin) (error "Unsupported system %s" system-type))))
+         (filename (format fstr name)))
     (if (file-exists-p filename)
         (module-load (file-truename filename))
       (error "Dynamic module '%s' don't installed, download from github.com/zombie110year/org-impaste or compile from source" filename))))
@@ -74,14 +71,18 @@ by formatted link."
     (insert placeholder)
     (make-thread
      (lambda ()
-       (let* ((impath (org-impaste-module--download
-                      url org-impaste-storage-dir referer))
+       (let* ((impath (condition-case err
+                          (org-impaste-module--download
+                           url org-impaste-storage-dir referer)
+                        (rust-error (message (error-message-string err)) nil)))
               (impath-r (file-relative-name
                          impath
                          (file-name-directory buffer-file-name)))
               (impath-s (format "[[file:%s]]" impath-r)))
          (message "org-impaste-download %s" impath-r)
-         (replace-string-in-region placeholder impath-s 1))))))
+         (replace-string-in-region placeholder impath-s 1)))
+     (format "#thread%s" placeholder))))
+
 
 ;; This is Command
 (defun org-impaste-clipboard ()
@@ -93,14 +94,25 @@ insert the formatted link into current buffer."
     (insert placeholder)
     (make-thread
      (lambda ()
-       (let* ((impath (org-impaste-module--clipboard
-                       org-impaste-storage-dir))
+       (let* ((impath (condition-case err
+                          (org-impaste-module--clipboard
+                           org-impaste-storage-dir)
+                        (rust-error (message (error-message-string err)) nil)))
               (impath-r (file-relative-name
                          impath
                          (file-name-directory buffer-file-name)))
               (impath-s (format "[[file:%s]]" impath-r)))
          (message "org-impaste-download %s" impath-r)
-         (replace-string-in-region placeholder impath-s 1))))))
+         (replace-string-in-region placeholder impath-s 1)))
+     (format "#thread%s" placeholder))))
+
+
+(defun org-impaste-manage ()
+  (message "TODO"))
+
+(defun org-impaste-clean ()
+  (message "TODO"))
+
 
 (org-impaste--init)
 (provide 'org-impaste)
